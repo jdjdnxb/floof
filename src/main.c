@@ -10,6 +10,8 @@
 #include <arch/x86_64/gdt/gdt.h>
 #include <arch/x86_64/drivers/apic/lapic.h>
 
+#include <mm/pmm/pmm.h>
+
 #include <kprintf.h>
 
 struct terminal kernel_terminal;
@@ -23,11 +25,12 @@ void main(void)
     x86_64_gdt_init();
     x86_64_idt_init();
 
+    pmm_init();
+
     acpi_init();
     lapic_init();
 
-    kprintf("APIC work paused until memory management is implemented...\n");
-    kprintf("Welcome to caramel!\n");
+    kprintf("Welcome to floof!\n");
     
     while (1)
     {

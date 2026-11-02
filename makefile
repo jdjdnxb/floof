@@ -6,7 +6,7 @@ XORRISO := xorriso
 LIMINE  := ./limine/limine
 
 TARGET := kernel.elf
-ISO    := caramel.iso
+ISO    := floof.iso
 
 BUILD    := build
 ISO_ROOT := $(BUILD)/iso_root

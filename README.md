@@ -1,8 +1,8 @@
-# Caramel
+# Floof 
 
 A hobby operating system written in C23 for x86-64 and assembly (eventually going to support additional architectures).
 
-Caramel is a monolithic kernel built from scratch, with Limine as its bootloader. It is focused on understanding OS internals and hardware support (can't lie, there is absolutely VERY little hardware support at the moment).
+Floof is a monolithic kernel built from scratch, with Limine as its bootloader. It is focused on understanding OS internals and hardware support (can't lie, there is absolutely VERY little hardware support at the moment).
 
 # Current state
 
@@ -20,7 +20,7 @@ Caramel is a monolithic kernel built from scratch, with Limine as its bootloader
 > NOTE!
 > Package names may vary between distributions and versions. Ensure the required tools are available in your `PATH` before building.
 
-Caramel requires the following tools:
+Floof requires the following tools:
 
 - `x86_64-elf-gcc` — an x86-64 cross-compiler
 - `nasm` — assembler
