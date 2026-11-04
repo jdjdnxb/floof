@@ -14,12 +14,23 @@ static uint64_t get_rip(void)
     return rip;
 }
 
+__attribute__((noreturn))
+void panic_end(void)
+{
+    __asm__ volatile("cli");
+    kprintf("\nSystem halted.\n");
+    while (1)
+    {
+        __asm__ volatile("hlt");
+    }
+}
+
 void panic(const char *reason, struct interrupt_frame *frame)
 {
     terminal_clear(&kernel_terminal);
 
-    kprintf("oepsie woepsie! the kewnel had a fowwie owo\n");
-    kprintf("weason: %s\n\n", reason);
+    kprintf("Kernel Panic!\n");
+    kprintf("Reason: %s\n\n", reason);
 
     if (frame)
     {
@@ -42,20 +53,26 @@ void panic(const char *reason, struct interrupt_frame *frame)
         kprintf("  RFLAGS:     %016llx\n", frame->rflags);
         kprintf("  RSP:        %016llx\n", frame->rsp);
         kprintf("  SS:         %016llx\n", frame->ss);
+        
+        if (frame->vector == 14)
+        {
+            uint64_t cr0, cr2, cr3, cr4;
+            __asm__ volatile("mov %%cr0, %0" : "=r" (cr0));
+            __asm__ volatile("mov %%cr2, %0" : "=r" (cr2));
+            __asm__ volatile("mov %%cr3, %0" : "=r" (cr3));
+            __asm__ volatile("mov %%cr4, %0" : "=r" (cr4));
+
+            kprintf("\nControl Registers:\n");
+            kprintf("  CR0:    %016llx\n", cr0);
+            kprintf("  CR2:    %016llx\n", cr2);
+            kprintf("  CR3:    %016llx\n", cr3);
+            kprintf("  CR4:    %016llx\n", cr4);
+            kprintf("\n");
+        }
     }
     else 
     {
-        kprintf("  RIP:    %016llx\n", get_rip());
+        kprintf("RIP:    %016llx\n", get_rip());
     }
-}
-
-__attribute__((noreturn))
-void panic_end(void)
-{
-    __asm__ volatile("cli");
-    kprintf("\nsystem hawted.\n");
-    while (1)
-    {
-        __asm__ volatile("hlt");
-    }
+    panic_end();
 }

@@ -6,6 +6,7 @@
 #include <boot/requests.h>
 
 #include <mm/pmm/pmm.h>
+#include <mm/hhdm.h>
 
 // Orders start at 0, so PMM_MAX_ORDER being 10 gives us 11 orders
 // free_lists[n].head would give us the first free block of order n
@@ -58,20 +59,36 @@ static uintptr_t pmm_split_block(uintptr_t phys, uint8_t order)
 // NOTE: this function handles merging until it stops being possible
 static uintptr_t pmm_merge_block(uintptr_t phys, uint8_t order)
 {
-    uint64_t  block_size = 4096 * (1UL << order);
-    uintptr_t buddy_phys = phys ^ block_size;
+    uintptr_t final_block_phys = 0;
+    uint8_t   current_order = order;
 
+    uint64_t  block_size = 4096 * (1UL << current_order);
+    uintptr_t buddy_phys = phys ^ block_size;
+    
     // head points to the first free block in the list
-    struct pmm_block *current = free_lists[order].head; 
+    struct pmm_block *current = free_lists[current_order].head; 
+    struct pmm_block *prev    = nullptr;
 
     while (current != nullptr)
     {
-        uintptr_t current_phys = (uintptr_t)current;
+        uintptr_t current_phys = virt_to_phys((uintptr_t)current);
         if (current_phys == buddy_phys)
         {
-            // 
+            if (prev == nullptr)
+            {
+                // Buddy is the head
+                free_lists[current_order].head = current->next;
+            }
+            else
+            {
+                // Buddy is somewhere else
+                prev->next = current->next; 
+            }
         }
-        current = current->next;
+        else {
+            prev = current;
+            current = current->next;
+        }
     }
 }
 
