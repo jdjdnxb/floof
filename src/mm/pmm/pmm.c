@@ -15,7 +15,7 @@ static struct pmm_free_list free_lists[PMM_MAX_ORDER + 1];
 static void pmm_add_block(uintptr_t phys, uint8_t order)
 {
     struct pmm_block *head = free_lists[order].head;
-    struct pmm_block *block = (struct pmm_block *)phys;
+    struct pmm_block *block = (struct pmm_block *)phys_to_virt(phys);
 
     block->next = head;
     free_lists[order].head = block;
@@ -30,7 +30,7 @@ static uintptr_t pmm_remove_block(uint8_t order)
     }
     free_lists[order].head = head->next;
     // Old head
-    return (uintptr_t)head;
+    return virt_to_phys((uintptr_t)head);
 }
 
 // phys is the physical address of a block's start 
@@ -59,41 +59,86 @@ static uintptr_t pmm_split_block(uintptr_t phys, uint8_t order)
 // NOTE: this function handles merging until it stops being possible
 static uintptr_t pmm_merge_block(uintptr_t phys, uint8_t order)
 {
-    uintptr_t final_block_phys = 0;
+    uintptr_t final_block_phys = phys;
     uint8_t   current_order = order;
 
-    uint64_t  block_size = 4096 * (1UL << current_order);
-    uintptr_t buddy_phys = phys ^ block_size;
-    
-    // head points to the first free block in the list
-    struct pmm_block *current = free_lists[current_order].head; 
-    struct pmm_block *prev    = nullptr;
-
-    while (current != nullptr)
+    while (current_order < PMM_MAX_ORDER)
     {
-        uintptr_t current_phys = virt_to_phys((uintptr_t)current);
-        if (current_phys == buddy_phys)
+        uint64_t  block_size = 4096 * (1UL << current_order);
+        uintptr_t buddy_phys = final_block_phys ^ block_size;
+
+        // head points to the first free block in the list
+        struct pmm_block *current = free_lists[current_order].head; 
+        struct pmm_block *prev    = nullptr;
+
+        bool found = false;
+
+        while (current != nullptr)
         {
-            if (prev == nullptr)
+            uintptr_t current_phys = virt_to_phys((uintptr_t)current);
+            if (current_phys == buddy_phys)
             {
-                // Buddy is the head
-                free_lists[current_order].head = current->next;
+                if (prev == nullptr)
+                {
+                    // Buddy is the head
+                    free_lists[current_order].head = current->next;
+                }
+                else
+                {
+                    // Buddy is somewhere else
+                    prev->next = current->next; 
+                }
+
+                if (buddy_phys < final_block_phys)
+                {
+                    final_block_phys = buddy_phys;
+                }
+
+                found = true;
+                break;
             }
-            else
-            {
-                // Buddy is somewhere else
-                prev->next = current->next; 
-            }
-        }
-        else {
+
             prev = current;
             current = current->next;
         }
+
+        if (!found)
+            break;
+
+        current_order++;
     }
+    return final_block_phys;
 }
 
 static uint64_t memmap_entry_count;
 static struct limine_memmap_entry **memmap_entries;
+
+static void pmm_init_region(uintptr_t base, uint64_t length)
+{
+    uintptr_t current = PAGE_ALIGN(base);
+    uintptr_t end     = PAGE_ALIGN_DOWN(base + length);
+
+    while (current < end)
+    {
+        uint8_t order = PMM_MAX_ORDER;
+
+        while (order > 0)
+        {
+            uint64_t block_size = 4096ULL << order;
+
+            if (block_size <= end - current && current % block_size == 0)
+            {
+                break;
+            }
+
+            order--;
+        }
+
+        pmm_add_block(current, order);
+
+        current += 4096ULL << order;
+    }
+}
 
 void pmm_init(void)
 {
@@ -104,10 +149,15 @@ void pmm_init(void)
     for (uint64_t i = 0; i < memmap_entry_count; i++)
     {
         struct limine_memmap_entry *current_entry = memmap_entries[i];
-        
+
         if (current_entry->type != LIMINE_MEMMAP_USABLE)
             continue;
+        
+        pmm_init_region(current_entry->base, current_entry->length);
 
-        kprintf("[PMM] Found usable memory region %llx-%llx (%llu kilobytes)\n", current_entry->base, current_entry->base + current_entry->length, (current_entry->base + current_entry->length - current_entry->base) / 4096);
+        kprintf("[PMM] Found and initialized usable memory region %llx-%llx (%llu kilobytes)\n", 
+                current_entry->base, current_entry->base + current_entry->length, 
+                (current_entry->base + current_entry->length - current_entry->base) 
+                / 4096);
     }
 }
