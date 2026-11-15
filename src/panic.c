@@ -27,6 +27,7 @@ void panic_end(void)
 
 void panic(const char *reason, struct interrupt_frame *frame)
 {
+    terminal_set_background(&kernel_terminal, 0x000000A8);
     terminal_clear(&kernel_terminal);
 
     kprintf("Kernel Panic!\n");

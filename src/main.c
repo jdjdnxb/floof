@@ -19,12 +19,12 @@ struct terminal kernel_terminal;
 
 void main(void)
 {
+    KASSERT(hhdm_request.response != nullptr);
+
     framebuffer_init();
     framebuffer_clear(0x00000000);
     terminal_init(&kernel_terminal);
-    
-    KASSERT(hhdm_request.response != nullptr);
-    
+
     kprintf("HHDM Offset: %llx\n", hhdm_request.response->offset);
 
     x86_64_gdt_init();
@@ -36,7 +36,7 @@ void main(void)
     lapic_init();
 
     kprintf("Welcome to floof!\n");
-    
+
     while (1)
     {
         __asm__ volatile("hlt");

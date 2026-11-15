@@ -2,6 +2,7 @@
 #include <stddef.h>
 
 #include <kprintf.h>
+#include <panic.h>
 
 #include <boot/requests.h>
 
@@ -140,6 +141,65 @@ static void pmm_init_region(uintptr_t base, uint64_t length)
     }
 }
 
+static uint8_t pmm_get_order(size_t size)
+{
+    if (size == 0)
+        return UINT8_MAX;
+
+    uint8_t order = 0;
+    size_t block_size = 4096;
+
+    while (block_size < size)
+    {
+        block_size <<= 1;
+        order++;
+
+        if (order > PMM_MAX_ORDER)
+            return UINT8_MAX;
+    }
+
+    return order;
+}
+
+uintptr_t pmm_alloc(size_t size)
+{
+    if (size == 0)
+        return 0;
+
+    uint8_t order = pmm_get_order(size);
+    uint8_t final_order = order;
+
+    if (order > PMM_MAX_ORDER)
+        return 0;
+
+    for (int i = order; i <= PMM_MAX_ORDER; i++)
+    {
+        if (free_lists[i].head != nullptr)
+        {
+            final_order = i;
+            break;
+        }
+    }
+
+    uintptr_t phys = pmm_remove_block(final_order);
+    
+    if (!phys)
+        return 0;
+
+    while (final_order > order)
+    {
+        phys = pmm_split_block(phys, final_order);
+        final_order -= 1;
+    }
+
+    return phys;
+}
+
+void pmm_free(uintptr_t phys, size_t size)
+{
+    // TODO
+}
+
 void pmm_init(void)
 {
     memmap_entry_count = memmap_request.response->entry_count;
@@ -152,7 +212,7 @@ void pmm_init(void)
 
         if (current_entry->type != LIMINE_MEMMAP_USABLE)
             continue;
-        
+
         pmm_init_region(current_entry->base, current_entry->length);
 
         kprintf("[PMM] Found and initialized usable memory region %llx-%llx (%llu kilobytes)\n", 

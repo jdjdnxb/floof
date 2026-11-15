@@ -26,3 +26,7 @@ struct pmm_free_list
 #define PMM_MAX_ORDER 10
 
 void pmm_init(void);
+
+// requested size is in bytes
+uintptr_t pmm_alloc(size_t size);
+void pmm_free(uintptr_t phys, size_t size);
