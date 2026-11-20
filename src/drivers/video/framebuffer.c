@@ -27,7 +27,7 @@ void framebuffer_init(void)
 
 void framebuffer_put_pixel(uint32_t x, uint32_t y, uint32_t color)
 {
-    if (x > framebuffer.width || y > framebuffer.height)
+    if (x >= framebuffer.width || y >= framebuffer.height)
     {
         return;
     }

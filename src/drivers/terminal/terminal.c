@@ -45,13 +45,37 @@ void terminal_init(struct terminal *terminal)
     terminal_clear(terminal);
 }
 
+void terminal_scroll(struct terminal *terminal)
+{
+    uint8_t *buffer = framebuffer.address;
+
+    uint64_t offset = FONT_ADVANCE_Y * framebuffer.pitch;
+    uint64_t size   = framebuffer.pitch * (framebuffer.height - FONT_ADVANCE_Y);
+
+    for (uint64_t i = 0; i < size; i++)
+    {
+        buffer[i] = buffer[i + offset];
+    }
+    
+    uint64_t clear_size  = FONT_ADVANCE_Y * framebuffer.pitch;
+    uint32_t *pixels     = framebuffer.address;
+    uint64_t pixel_count = clear_size / sizeof(uint32_t);
+
+    for (uint64_t i = 0; i < pixel_count; i++)
+    {
+        *pixels++ = terminal->background;
+    }
+
+    terminal_set_cursor(terminal, TERMINAL_MARGIN, terminal->height - FONT_ADVANCE_Y);
+}
+
 void terminal_newline(struct terminal *terminal)
 {
     uint32_t next_y = terminal->cursor_y + FONT_ADVANCE_Y;
 
     if (next_y + FONT_ADVANCE_Y > terminal->height) 
     {
-        // TODO: implement terminal_scroll()     
+        terminal_scroll(terminal);    
     }
     else 
     {

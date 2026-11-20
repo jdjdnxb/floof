@@ -11,6 +11,7 @@
 #include <arch/x86_64/drivers/apic/lapic.h>
 
 #include <mm/pmm/pmm.h>
+#include <mm/hhdm.h>
 
 #include <kernel/kassert.h>
 #include <kprintf.h>

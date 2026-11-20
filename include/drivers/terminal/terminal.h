@@ -21,6 +21,7 @@ void terminal_resize(struct terminal *terminal, uint64_t width, uint64_t height)
 
 void terminal_init(struct terminal *terminal);
 
+void terminal_scroll(struct terminal *terminal);
 void terminal_newline(struct terminal *terminal);
 void terminal_tab(struct terminal *terminal);
 void terminal_backspace(struct terminal *terminal);

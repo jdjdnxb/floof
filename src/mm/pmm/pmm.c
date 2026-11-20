@@ -108,6 +108,7 @@ static uintptr_t pmm_merge_block(uintptr_t phys, uint8_t order)
 
         current_order++;
     }
+
     return final_block_phys;
 }
 
@@ -197,7 +198,17 @@ uintptr_t pmm_alloc(size_t size)
 
 void pmm_free(uintptr_t phys, size_t size)
 {
-    // TODO
+    uint8_t order = pmm_get_order(size);
+
+    if (order > PMM_MAX_ORDER)
+    {
+        kprintf("[PMM] Free: received invalid order: %u.\n", order);
+        return; 
+    }
+
+    uintptr_t final_phys = pmm_merge_block(phys, order);
+
+    pmm_add_block(final_phys, order);
 }
 
 void pmm_init(void)
